@@ -1,166 +1,139 @@
-import sys
 import csv
+import datetime
 import random
+import sys
+from math import sqrt
 
 
-def distance(nodeA, nodeB):
-	total = 0
-	for x, y in zip(nodeA, nodeB):
-		total+= abs(x**2 - y**2)
-	return total
+def distance(node_a, node_b):
+    total = 0
+    for x, y in zip(node_a, node_b):
+        total += abs(x ** 2 - y ** 2)
+    return sqrt(total)
 
 
 class KMeans(object):
-	"""docstring for KMeans"""
-	def __init__(self):
-		super(KMeans, self).__init__()
-		"""generate initial center of cluster"""
-		self.centerA = [0, 0, 0, 0, 0, 0, 0, 0]
-		self.centerB = [0, 0, 0, 0, 0, 0, 0, 0]
-		self.data = []
-		self.clusterA = []
-		self.clusterB = []
-		random.seed()
+    """docstring for KMeans"""
 
-		""" Random center"""
-		for x in range(0, 8):
-			self.centerA[x] = random.randrange(200000)
-			self.centerB[x] = random.randrange(200000)
+    def __init__(self, input_file):
+        super(KMeans, self).__init__()
+        """generate initial center of cluster"""
+        self.input_file = input_file
+        self.data_type = input_file.split('/')[-1].split('_')[0].lower()
+        self.data = []
+        self.center = 0
+        self.centers = []
+        self.cluster = []
+        self.label = []
+        random.seed()
 
-	def append(self, node):
-		self.data.append(node)
+        if self.data_type == 'game':
+            self.center = 2
+        elif self.data_type == 'gif':
+            self.center = 2
 
-	def calCenter(self, cluster):
-		temp = []
-		for x in range(0,8):
-			temp.append(0)
-			for index in cluster:
-				temp[x] += self.data[index][x]
-			if len(cluster) is not 0:
-				temp[x] /= len(cluster)
-			else:
-				temp[x] = 0
-		return	temp
+        # Random center & generate cluster
+        # type decide the amount of center
+        #
+        # GIF   ==> 2
+        # Game  ==> 2 (actually 3)
+        for center in range(self.center):
+            init_center = []
+            for j in range(0, 8):
+                init_center.append(random.randrange(2 ** 32))
+            self.centers.append(init_center)
+            self.cluster.append([])
 
-	def calssify(self):
-		self.clusterA = []
-		self.clusterB = []
-		index = 0
-		for x in self.data:
-			if distance(x[:-1], self.centerA) < distance(x[:-1], self.centerB):
-				self.clusterA.append(index)
-			else:
-				self.clusterB.append(index)
-			index+=1
+        self.get_data(self.input_file)
 
-	def display(self):
-		#print("centerA     centerB")
-		#for x, y in zip(self.centerA, self.centerB):
-		#	print("%09.2f    %09.2f" % (x, y))
+    def calssify(self):
+        index = 0
+        for datum in self.data:
+            # calculate distance to centers
+            # minimum = index, dist
+            minimum = 0, -1
+            for idx, center in enumerate(self.centers):
+                dist = distance(datum, center)
+                if minimum[1] < 0 or dist < minimum[1]:
+                    minimum = idx, dist
 
-		print(self.centerB[0], self.centerB[1], self.centerB[2], self.centerB[3], self.centerB[4], self.centerB[5], self.centerB[6], self.centerB[7])
-		#print(self.centerB)
+            self.cluster[minimum[0]].append(index)
+            index += 1
 
-	def getData(self, file):
-		type = file.split('/')[-1].split('_')[0]
-		with open(file, newline='\n') as csvfile:
-			read = csv.reader(csvfile, delimiter=',', quotechar='"')
-			if type == 'game':
-				for row in read:
-					if row[1] is "0":
-						node = []
-						index = 0
-						for x in row[2:-1]:
-							if index != 8 and index != 9:
-								node.append(int(x))
-							index += 1
-						cluster.append(node)
-			elif type == 'gif':
-				i = 1
-				for row in read:
-					if i is 1:
-						pass
-					elif row[1] is "0" and i > 1 and i < 5:
-						#print(row)
-						node = []
-						index = 0
-						for x in row[2:-1]:
-							if index != 8 and index != 9:
-								node.append(int(x))
-							index += 1
-						cluster.append(node)
+    def cal_center(self, clus):
+        new_center = []
+        for x in range(0, 8):
+            temp = 0
+            for index in clus:
+                temp += self.data[index][x]
+            if len(clus) != 0:
+                temp /= len(clus)
+            else:
+                temp = 0
+            new_center.append(temp)
 
-					if i == 5:
-						i = 0
-					i += 1
+        return new_center
 
-	def updateCenter(self):
-		self.calssify()
-		self.centerA = self.calCenter(self.clusterA)
-		self.centerB = self.calCenter(self.clusterB)
+    def get_data(self, file):  # Mod complete yet
+        # t = file.split('/')[-1].split('_')[0].lower()
+        with open(file, newline='\n') as csvfile:
+            read = csv.reader(csvfile, delimiter=',', quotechar='"')
+            for row in read:
+                if row[1] == '0' and row[12] != '2':
+                    self.data.append([int(value) for value in row[2:10]])
+                    self.label.append(int(row[12]))
 
-	def verify(self):
-		LEFT = 1
-		RIGHT = 0
-		countA = 0
-		countB = 0
+            # need complete the handle GIF later
 
-		for a in self.clusterA:
-			#print (self.data[a][-1])
-			if self.data[a][-1] is LEFT:
-				countA += 1
-		for b in self.clusterB:
-			#print (self.data[a])
-			if self.data[b][-1] is RIGHT:
-				countB += 1
-		#####
-		correct = LEFT if countA > len(self.clusterA) - countA else RIGHT
-		acc = (countA if countA > len(self.clusterA) - countA else (len(self.clusterA) - countA)) / len(self.clusterA)
-		if correct == LEFT:
-			print("Cluster A is {}, accuracy: {} ---- {}/{}".format("LEFT", acc, countA, len(self.clusterA)))
-		else:
-			print("Cluster A is {}, accuracy: {} ---- {}/{}".format("RIGHT", acc, len(self.clusterA) -countA, len(self.clusterA)))
+    def update_center(self):
+        # clean up cluster
+        for index in range(len(self.cluster)):
+            self.cluster[index] = []
 
-		correct = RIGHT if countB > len(self.clusterB) - countB else LEFT
-		acc = (countB if countB > len(self.clusterB) - countB else (len(self.clusterB) - countB)) / len(self.clusterB)
-		if correct == RIGHT:
-			print("Cluster B is {}, accuracy: {} ---- {}/{}".format("RIGHT", acc, countB, len(self.clusterB)))
-		else:
-			print("Cluster B is {}, accuracy: {} ---- {}/{}".format("LEFT", acc, len(self.clusterB) -countB, len(self.clusterB)))
+        self.calssify()
+        for index in range(0, len(self.centers)):
+            self.centers[index] = self.cal_center(self.cluster[index])
 
-		countA = 0
-		countB = 0
-		for x in self.data:
-			if x[-1] is RIGHT:
-				countA += 1
-			else:
-				countB += 1
-		print("RIGHT is {}".format(countA))
-		print("LEFT is {}".format(countB))
-		print("ClusterA " + str(len(self.clusterA)))
-		print("ClusterB " + str(len(self.clusterB)))
+    def verify(self):
+        # idle = 2
+        # left = 1
+        # right = 0
+
+        # show center
+        for index in range(self.center):
+            print("Center " + str(index) + " " + str([int(x) for x in self.centers[index]]))
+
+        # cal label for clusters
+        for index, subcluster in enumerate(self.cluster):
+            count = [0] * self.center
+            for clus in subcluster:
+                count[self.label[clus]] += 1
+
+            # show accuracy
+            # major = index, count
+            major = 0, -1
+            for idx in range(len(count)):
+                if count[idx] > major[1]:
+                    major = idx, count[idx]
+            if len(subcluster) != 0:
+                acc = major[1] / len(subcluster)
+            else:
+                acc = 0
+            print(count)
+            print("Cluster " + str(index) + " is Label " + str(major[0]) + " Accuracy: " + str(acc))
+            index += 1
 
 
-cluster = KMeans()
-# input file name
-file = sys.argv[1]
-cluster.getData(file);
+# input file name in argv
+inputs = sys.argv[1]
+cluster = KMeans(inputs)
 
-		
-OcA = cluster.centerA
-OcB = cluster.centerB
-for x in range(1,100):
-	cluster.updateCenter()
-	#cluster.display()
-	
-cluster.verify()
-print("Origin Center A")
-print(str(OcA))
-print("Origin Center B")
-print(str(OcB))
-print("New Center A")
-print(str(cluster.centerA))
-print("New Center B")
-print(str(cluster.centerB))
-
-
+update = int(input('Update times(0 to end)\n'))
+while update != 0:
+    start_time = datetime.datetime.now()
+    for i in range(update):
+        cluster.update_center()
+    duration_time = datetime.datetime.now() - start_time
+    print('Calculate time for ' + str(update) + ' update_center(datetime ver.): ' + str(duration_time))
+    cluster.verify()
+    update = int(input('Update times(0 to end)\n'))
