@@ -1,8 +1,9 @@
 import csv
-import datetime
 import random
 import sys
 from math import sqrt
+
+dimension = 8
 
 
 def distance(node_a, node_b):
@@ -25,6 +26,7 @@ class KMeans(object):
         self.centers = []
         self.cluster = []
         self.label = []
+        self.cal_label = []
         random.seed()
 
         if self.data_type == 'game':
@@ -47,6 +49,11 @@ class KMeans(object):
         self.get_data(self.input_file)
 
     def calssify(self):
+        # clean up cluster
+        self.cluster = []
+        for index in range(self.center):
+            self.cluster.append([])
+
         index = 0
         for datum in self.data:
             # calculate distance to centers
@@ -74,8 +81,25 @@ class KMeans(object):
 
         return new_center
 
+    # cal the range of each cluster
+    def cal_range(self):
+        _range = []
+        for index, _cluster in enumerate(self.cluster):
+            _cluster = list(filter(lambda x: self.cal_label[index] == self.label[x], _cluster))
+            temp_range = []
+            for _i in range(dimension):
+                r = []
+                values = list(map(lambda clus: self.data[clus][_i], _cluster))
+                r.append(min(values))
+                r.append(max(values))
+                temp_range.append(r)
+            _range.append(temp_range)
+
+        return _range
+
     def get_data(self, file):  # Mod complete yet
-        # t = file.split('/')[-1].split('_')[0].lower()
+        self.data = []
+        self.label = []
         with open(file, newline='\n') as csvfile:
             read = csv.reader(csvfile, delimiter=',', quotechar='"')
             for row in read:
@@ -86,10 +110,6 @@ class KMeans(object):
             # need complete the handle GIF later
 
     def update_center(self):
-        # clean up cluster
-        for index in range(len(self.cluster)):
-            self.cluster[index] = []
-
         self.calssify()
         for index in range(0, len(self.centers)):
             self.centers[index] = self.cal_center(self.cluster[index])
@@ -99,27 +119,32 @@ class KMeans(object):
         # left = 1
         # right = 0
 
+        # Emtpy self.cal_label
+        self.cal_label = []
+
         # show center
         for index in range(self.center):
             print("Center " + str(index) + " " + str([int(x) for x in self.centers[index]]))
 
         # cal label for clusters
-        for index, subcluster in enumerate(self.cluster):
+        for index, each_cluster in enumerate(self.cluster):
             count = [0] * self.center
-            for clus in subcluster:
+            for clus in each_cluster:
                 count[self.label[clus]] += 1
 
+            # Cal greatest label in each cluster
             # show accuracy
             # major = index, count
             major = 0, -1
             for idx in range(len(count)):
                 if count[idx] > major[1]:
                     major = idx, count[idx]
-            if len(subcluster) != 0:
-                acc = major[1] / len(subcluster)
+            if len(each_cluster) != 0:
+                acc = major[1] / len(each_cluster)
             else:
                 acc = 0
-            print(count)
+
+            self.cal_label.append(major[0])
             print("Cluster " + str(index) + " is Label " + str(major[0]) + " Accuracy: " + str(acc))
             index += 1
 
@@ -130,10 +155,10 @@ cluster = KMeans(inputs)
 
 update = int(input('Update times(0 to end)\n'))
 while update != 0:
-    start_time = datetime.datetime.now()
     for i in range(update):
         cluster.update_center()
-    duration_time = datetime.datetime.now() - start_time
-    print('Calculate time for ' + str(update) + ' update_center(datetime ver.): ' + str(duration_time))
     cluster.verify()
+    ranges = cluster.cal_range()
+    print('Range of clusters 0' + str(ranges[0]))
+    print('Range of clusters 1' + str(ranges[1]))
     update = int(input('Update times(0 to end)\n'))
