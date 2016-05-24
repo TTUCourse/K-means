@@ -4,6 +4,10 @@ import sys
 from math import sqrt
 
 dimension = 8
+# input file name in argv
+inputs = sys.argv[1]
+output_file = ''
+# output_file = 'range_jason.csv'
 
 
 def distance(node_a, node_b):
@@ -88,16 +92,16 @@ class KMeans(object):
             _cluster = list(filter(lambda x: self.cal_label[index] == self.label[x], _cluster))
             temp_range = []
             for _i in range(dimension):
-                r = []
+                _r = []
                 values = list(map(lambda clus: self.data[clus][_i], _cluster))
-                r.append(min(values))
-                r.append(max(values))
-                temp_range.append(r)
+                _r.append(min(values))
+                _r.append(max(values))
+                temp_range.append(_r)
             _range.append(temp_range)
 
         return _range
 
-    def get_data(self, file):  # Mod complete yet
+    def get_data(self, file):
         self.data = []
         self.label = []
         with open(file, newline='\n') as csvfile:
@@ -149,8 +153,6 @@ class KMeans(object):
             index += 1
 
 
-# input file name in argv
-inputs = sys.argv[1]
 cluster = KMeans(inputs)
 
 update = int(input('Update times(0 to end)\n'))
@@ -162,3 +164,19 @@ while update != 0:
     print('Range of clusters 0' + str(ranges[0]))
     print('Range of clusters 1' + str(ranges[1]))
     update = int(input('Update times(0 to end)\n'))
+
+ranges = cluster.cal_range()
+with open(output_file, 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+    if cluster.cal_label[0] == 0:
+        centers = cluster.centers
+        ranges = cluster.cal_range()
+    else:
+        centers = cluster.centers[::-1]
+        ranges = cluster.cal_range()[::-1]
+
+    for c in centers:
+        writer.writerow(c)
+    for c in ranges:
+        r = list(map(lambda x: str(x[0]) + ':' + str(x[1]), c))
+        writer.writerow(r)
